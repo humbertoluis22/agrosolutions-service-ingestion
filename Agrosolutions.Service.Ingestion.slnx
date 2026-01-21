@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AgrosolutionsServiceIngestion.Api/AgrosolutionsServiceIngestion.Api.csproj" />
+    <Project Path="src/AgrosolutionsServiceIngestion.Application/AgrosolutionsServiceIngestion.Application.csproj" />
+    <Project Path="src/AgrosolutionsServiceIngestion.Domain/AgrosolutionsServiceIngestion.Domain.csproj" />
+    <Project Path="src/AgrosolutionsServiceIngestion.Infrastructure/AgrosolutionsServiceIngestion.Infrastructure.csproj" />
+    <Project Path="src/AgrosolutionsServiceIngestion.Shared/AgrosolutionsServiceIngestion.Shared.csproj" />
+  </Folder>
+</Solution>
