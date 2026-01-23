@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AgrosolutionsServiceIngestion.Domain\AgrosolutionsServiceIngestion.Domain.csproj" />
+    <ProjectReference Include="..\AgrosolutionsServiceIngestion.Shared\AgrosolutionsServiceIngestion.Shared.csproj" />
+  </ItemGroup>
+
 </Project>
