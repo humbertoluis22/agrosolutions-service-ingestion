@@ -8,6 +8,6 @@ namespace AgrosolutionsServiceIngestion.Domain.Enums
     {
         SoilMoisture = 1,
         Temperature = 2,
-        Ph = 3
+        Humidity = 3
     }
 }

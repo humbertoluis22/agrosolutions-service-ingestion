@@ -5,23 +5,13 @@ using System.Text;
 
 namespace AgrosolutionsServiceIngestion.Domain.Entities
 {
-    public class Sensor
+    public class SensorRawData
     {
-        public Guid Id { get; private set; }
-        public Guid TalhaoId { get; private set; }
-        public SensorType Type { get; private set; }
-        public bool Active { get; private set; }
-
-        private Sensor() { }
-
-        public Sensor(Guid id, Guid talhaoId, SensorType type)
-        {
-            Id = id;
-            TalhaoId = talhaoId;
-            Type = type;
-            Active = true;
-        }
-
-        public void Disable() => Active = false;
+        public Guid SensorId { get; set; }
+        public Guid TalhaoId { get; set; }
+        public decimal Value { get; set; }
+        public DateTime CollectedAt { get; set; }
+        public SensorType Type { get; set; }
     }
+
 }
