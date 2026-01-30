@@ -1,5 +1,7 @@
 using AgrosolutionsServiceIngestion.Application.Interfaces;
+using AgrosolutionsServiceIngestion.Application.Validators;
 using AgrosolutionsServiceIngestion.Infrastructure.Messaging;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
 
@@ -19,7 +21,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
+builder.Services.AddValidatorsFromAssemblyContaining<SensorRawRequestValidator>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

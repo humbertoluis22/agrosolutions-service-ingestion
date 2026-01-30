@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -17,7 +19,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AgrosolutionsServiceIngestion.Application\AgrosolutionsServiceIngestion.Application.csproj" />
-    <ProjectReference Include="..\AgrosolutionsServiceIngestion.Domain\AgrosolutionsServiceIngestion.Domain.csproj" />
     <ProjectReference Include="..\AgrosolutionsServiceIngestion.Infrastructure\AgrosolutionsServiceIngestion.Infrastructure.csproj" />
     <ProjectReference Include="..\AgrosolutionsServiceIngestion.Shared\AgrosolutionsServiceIngestion.Shared.csproj" />
   </ItemGroup>

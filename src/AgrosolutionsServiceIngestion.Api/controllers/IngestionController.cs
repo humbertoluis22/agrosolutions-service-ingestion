@@ -1,5 +1,5 @@
 ﻿using AgrosolutionsServiceIngestion.Application.UseCase;
-using AgrosolutionsServiceIngestion.Shared.Events;
+using AgrosolutionsServiceIngestion.Shared.DTOs.Request;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AgrosolutionsServiceIngestion.Api.controllers
@@ -16,7 +16,7 @@ namespace AgrosolutionsServiceIngestion.Api.controllers
         }
 
         [HttpPost("sensor")]
-        public async Task<IActionResult> Ingest([FromBody] SensorRawCollectedEvent dto)
+        public async Task<IActionResult> Ingest([FromBody] SensorRawRequest dto)
         {
             await _useCase.ExecuteAsync(dto);
             return Accepted();
