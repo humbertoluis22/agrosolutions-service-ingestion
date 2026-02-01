@@ -1,5 +1,5 @@
 ﻿using AgrosolutionsServiceIngestion.Application.Interfaces;
-using AgrosolutionsServiceIngestion.Shared.Events;
+using AgrosolutionsServiceIngestion.Shared.DTOs.Request;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -15,7 +15,7 @@ namespace AgrosolutionsServiceIngestion.Application.UseCase
             _publisher = publisher;
         }
 
-        public async Task ExecuteAsync(SensorRawCollectedEvent data)
+        public async Task ExecuteAsync(SensorRawRequest data)
         {
             await _publisher.PublishAsync(data);
         }

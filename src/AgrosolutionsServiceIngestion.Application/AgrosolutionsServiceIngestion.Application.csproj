@@ -11,4 +11,8 @@
     <ProjectReference Include="..\AgrosolutionsServiceIngestion.Shared\AgrosolutionsServiceIngestion.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+  </ItemGroup>
+
 </Project>

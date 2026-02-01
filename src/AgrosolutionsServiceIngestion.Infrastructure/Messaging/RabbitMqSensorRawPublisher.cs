@@ -1,5 +1,5 @@
 ﻿using AgrosolutionsServiceIngestion.Application.Interfaces;
-using AgrosolutionsServiceIngestion.Shared.Events;
+using AgrosolutionsServiceIngestion.Shared.DTOs.Request;
 using RabbitMQ.Client;
 using System;
 using System.Collections.Generic;
@@ -17,7 +17,7 @@ namespace AgrosolutionsServiceIngestion.Infrastructure.Messaging
             _channel = channel;
         }
 
-        public Task PublishAsync(SensorRawCollectedEvent data)
+        public Task PublishAsync(SensorRawRequest data)
         {
             var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(data));
 
