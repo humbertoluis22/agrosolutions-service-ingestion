@@ -11,11 +11,13 @@ builder.Services.AddControllers();
 
 builder.Services.AddSingleton<IConnection>(_ =>
 {
+    var configSection = builder.Configuration.GetSection("RabbitMQ");
+
     var factory = new ConnectionFactory
     {
-        HostName = "localhost",
-        UserName = "guest",
-        Password = "guest"
+        HostName = configSection["Host"] ?? "localhost",
+        UserName = configSection["Username"] ?? "guest",
+        Password = configSection["Password"] ?? "guest"
     };
 
     return factory.CreateConnection();
@@ -26,7 +28,7 @@ builder.Services.AddSingleton<IConnection>(_ =>
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-
+builder.Services.AddHealthChecks();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddValidatorsFromAssemblyContaining<SensorRawRequestValidator>();
@@ -46,4 +48,5 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.MapControllers();
+app.MapHealthChecks("/health");
 app.Run();
