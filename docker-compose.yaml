@@ -1,0 +1,25 @@
+services:
+  ingestion-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ingestion-api
+    ports:
+      - "5198:5198"
+    environment:
+      # Força o Kestrel a rodar na porta 5198 dentro do container
+      - ASPNETCORE_URLS=http://+:5198
+      - ASPNETCORE_ENVIRONMENT=Development
+      
+      # --- Conexão com RabbitMQ (que está na outra stack) ---
+      # Note que usamos o NOME DO CONTAINER/SERVIÇO da outra stack, não localhost
+      - RabbitMQ__Host=rabbitmq 
+      - RabbitMQ__Username=guest
+      - RabbitMQ__Password=guest
+      
+    networks:
+      - agrosolutions-network
+
+networks:
+  agrosolutions-network:
+    external: true
