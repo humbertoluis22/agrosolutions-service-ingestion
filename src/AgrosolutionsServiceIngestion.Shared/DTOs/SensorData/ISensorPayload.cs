@@ -7,7 +7,13 @@ namespace AgrosolutionsServiceIngestion.Shared.DTOs.SensorData;
 // Interface marcadora para polimorfismo
 public interface ISensorPayload { }
 
-public record SoloData(double Umidade, double Ph, double Nitrogenio, double Fosforo, double Potassio) : ISensorPayload;
+public record NutrientesData(
+    double Nitrogenio,
+    double Fosforo,
+    double Potassio
+);
+
+public record SoloData(double Umidade, double Ph, NutrientesData NutrientesData) : ISensorPayload;
 
 public record SiloData(double NivelPreenchimento, double TemperaturaMedia, double Co2) : ISensorPayload;
 
