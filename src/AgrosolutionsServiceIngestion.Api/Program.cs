@@ -2,27 +2,13 @@ using AgrosolutionsServiceIngestion.Application.Interfaces;
 using AgrosolutionsServiceIngestion.Application.UseCase;
 using AgrosolutionsServiceIngestion.Application.Validators;
 using AgrosolutionsServiceIngestion.Infrastructure.Messaging;
+using Amazon.SimpleNotificationService;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
-
-builder.Services.AddSingleton<IConnection>(_ =>
-{
-    var configSection = builder.Configuration.GetSection("RabbitMQ");
-
-    var factory = new ConnectionFactory
-    {
-        HostName = configSection["Host"] ?? "localhost",
-        UserName = configSection["Username"] ?? "guest",
-        Password = configSection["Password"] ?? "guest"
-    };
-
-    return factory.CreateConnection();
-});
-
 
 
 // Add services to the container.
@@ -33,7 +19,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddValidatorsFromAssemblyContaining<SensorRawRequestValidator>();
 builder.Services.AddScoped<PublishSensorRawUseCase>();
-builder.Services.AddScoped<ISensorRawPublisher, RabbitMqSensorRawPublisher>();
+
+//builder.Services.AddScoped<ISensorRawPublisher, RabbitMqSensorRawPublisher>();
+builder.Services.AddAWSService<IAmazonSimpleNotificationService>();
+builder.Services.AddSingleton<ISensorRawPublisher, SnsSensorRawPublisher>();
 
 
 var app = builder.Build();

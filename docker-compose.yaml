@@ -8,14 +8,16 @@ services:
       - "5198:5198"
     environment:
       # Força o Kestrel a rodar na porta 5198 dentro do container
-      - ASPNETCORE_URLS=http://+:5198
+      - ASPNETCORE_URLS=http://+:5198 
       - ASPNETCORE_ENVIRONMENT=Development
       
-      # --- Conexão com RabbitMQ (que está na outra stack) ---
-      # Note que usamos o NOME DO CONTAINER/SERVIÇO da outra stack, não localhost
-      - RabbitMQ__Host=rabbitmq 
-      - RabbitMQ__Username=guest
-      - RabbitMQ__Password=guest
+      # --- Credenciais AWS (Injetadas do ambiente host) ---
+      - AWS_ACCESS_KEY_ID=...
+      - AWS_SECRET_ACCESS_KEY=...
+
+      # --- Configurações AWS (Mapeamento do appsettings "AWS") ---
+      - AWS__Region=sa-east-1
+      - AWS__SnsTopicArn=arn:aws:sns:sa-east-1:405114419969:agrosolutions-raw-data
       
     networks:
       - agrosolutions-network
