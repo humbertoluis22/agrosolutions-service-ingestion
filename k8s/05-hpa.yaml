@@ -9,11 +9,11 @@ spec:
     kind: Deployment
     name: service-ingestion
   minReplicas: 1
-  maxReplicas: 5
+  maxReplicas: 2
   metrics:
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 60
+        averageUtilization: 80
