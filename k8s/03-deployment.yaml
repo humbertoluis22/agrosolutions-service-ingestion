@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-ingestion
+  namespace: agrosolutions
+  labels:
+    app: service-ingestion
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-ingestion
+  template:
+    metadata:
+      labels:
+        app: service-ingestion
+    spec:
+      containers:
+      - name: service-ingestion
+        image: agrosolutions-ingestion:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        
+        # Carrega variáveis do ConfigMap
+        envFrom:
+        - configMapRef:
+            name: ingestion-config
+            
+        # Injeta credenciais da AWS como variáveis de ambiente
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: ingestion-aws-secrets
+              key: AWS_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ingestion-aws-secrets
+              key: AWS_SECRET_ACCESS_KEY
+              
+        # Health Checks (Baseado no seu Program.cs que tem .AddHealthChecks())
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"

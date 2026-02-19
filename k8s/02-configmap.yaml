@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ingestion-config
+  namespace: agrosolutions
+data:
+  ASPNETCORE_ENVIRONMENT: "Development"
+  # Configurações AWS
+  AWS__Region: "sa-east-1"
+  AWS__SnsTopicArn: "arn:aws:sns:sa-east-1:316295889438:agrosolutions-raw-data"

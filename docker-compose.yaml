@@ -12,12 +12,12 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       
       # --- Credenciais AWS (Injetadas do ambiente host) ---
-      - AWS_ACCESS_KEY_ID=...
-      - AWS_SECRET_ACCESS_KEY=...
 
+      - AWS_ACCESS_KEY_ID= "${AWS_ACCESS_KEY_ID}" 
+      - AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
       # --- Configurações AWS (Mapeamento do appsettings "AWS") ---
       - AWS__Region=sa-east-1
-      - AWS__SnsTopicArn=arn:aws:sns:sa-east-1:405114419969:agrosolutions-raw-data
+      - AWS__SnsTopicArn=arn:aws:sns:sa-east-1:316295889438:agrosolutions-raw-data
       
     networks:
       - agrosolutions-network
