@@ -1,0 +1,100 @@
+---
+# ServiceMonitor para Prometheus scraping da Ingestion API
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ingestion-api-monitor
+  namespace: agrosolutions-ingestion
+  labels:
+    app: ingestion-api
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: ingestion-api
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+# PrometheusRule para alertas críticos
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ingestion-api-alerts
+  namespace: agrosolutions-ingestion
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+  - name: ingestion-api
+    interval: 30s
+    rules:
+    # Alerta: API está down
+    - alert: IngestionApiDown
+      expr: up{job="ingestion-api-service"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        component: ingestion-api
+      annotations:
+        summary: "Ingestion API está down"
+        description: "A Ingestion API está inacessível há mais de 2 minutos."
+    
+    # Alerta: Alto uso de CPU
+    - alert: IngestionApiHighCPU
+      expr: rate(container_cpu_usage_seconds_total{pod=~"ingestion-api-.*"}[5m]) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        component: ingestion-api
+      annotations:
+        summary: "Alto uso de CPU na Ingestion API"
+        description: "CPU acima de 80% por mais de 5 minutos no pod {{ $labels.pod }}"
+    
+    # Alerta: Alto uso de memória
+    - alert: IngestionApiHighMemory
+      expr: container_memory_usage_bytes{pod=~"ingestion-api-.*"} / container_spec_memory_limit_bytes{pod=~"ingestion-api-.*"} > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        component: ingestion-api
+      annotations:
+        summary: "Alto uso de memória na Ingestion API"
+        description: "Memória acima de 90% no pod {{ $labels.pod }}"
+    
+    # Alerta: Taxa de erro HTTP alta
+    - alert: IngestionApiHighErrorRate
+      expr: rate(http_requests_total{status=~"5..", job="ingestion-api-service"}[5m]) > 0.05
+      for: 5m
+      labels:
+        severity: warning
+        component: ingestion-api
+      annotations:
+        summary: "Alta taxa de erros HTTP 5xx"
+        description: "Taxa de erros 5xx acima de 5% nos últimos 5 minutos"
+    
+    # Alerta: Latência alta
+    - alert: IngestionApiHighLatency
+      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="ingestion-api-service"}[5m])) > 1
+      for: 5m
+      labels:
+        severity: warning
+        component: ingestion-api
+      annotations:
+        summary: "Alta latência na Ingestion API"
+        description: "P95 da latência acima de 1s nos últimos 5 minutos"
+    
+    # Alerta: Pod reiniciando frequentemente
+    - alert: IngestionApiFrequentRestarts
+      expr: rate(kube_pod_container_status_restarts_total{pod=~"ingestion-api-.*"}[15m]) > 0
+      for: 5m
+      labels:
+        severity: warning
+        component: ingestion-api
+      annotations:
+        summary: "Ingestion API reiniciando frequentemente"
+        description: "Pod {{ $labels.pod }} reiniciou {{ $value }} vezes nos últimos 15 minutos"

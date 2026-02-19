@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+.github
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+README.md
+LICENSE
+docs/
+
+# Kubernetes
+k8s/
+
+# Build outputs
+**/bin/
+**/obj/
+**/publish/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.userprefs
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+
+# Logs
+*.log
+logs/
+
+# Temporary
+**/tmp/
+**/temp/

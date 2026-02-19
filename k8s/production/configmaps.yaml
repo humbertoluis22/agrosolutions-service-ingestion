@@ -1,0 +1,19 @@
+---
+# Ingestion API ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ingestion-api-config
+  namespace: agrosolutions-ingestion
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ASPNETCORE_URLS: "http://*:8080"
+  AllowedHosts: "*"
+  
+  # AWS Configuration
+  AWS__Region: "sa-east-1"
+  AWS__SnsTopicArn: "arn:aws:sns:sa-east-1:316295889438:agrosolutions-raw-data"
+  
+  # Logging Configuration
+  Logging__LogLevel__Default: "Information"
+  Logging__LogLevel__Microsoft.AspNetCore: "Warning"
