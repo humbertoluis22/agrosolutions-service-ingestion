@@ -163,7 +163,7 @@ jobs:
           if [ -n "$POD_NAME" ]; then
             for i in {1..3}; do
               echo "Tentativa $i/3 - Health check via pod..."
-              HEALTH_RESULT=$(kubectl exec -n agrosolutions-ingestion "$POD_NAME" -- wget -qO- http://localhost:8080/health/ready 2>/dev/null || true)
+              HEALTH_RESULT=$(kubectl exec -n agrosolutions-ingestion "$POD_NAME" -- wget -qO- http://localhost:8080/health 2>/dev/null || true)
               if [ -n "$HEALTH_RESULT" ]; then
                 echo "✅ Health check passou: $HEALTH_RESULT"
                 break
