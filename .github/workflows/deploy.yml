@@ -2,19 +2,81 @@ name: AgroSolutions Ingestion - CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
-      - develop
-  pull_request:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 env:
   ECR_REPOSITORY: agrosolutions-ingestion-api
   EKS_CLUSTER_NAME: agrosolutions-eks-cluster
   AWS_REGION: sa-east-1
-  DOTNET_VERSION: "10.0.x"
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - run: dotnet restore AgrosolutionsServiceIngestion.slnx
+      - run: dotnet build AgrosolutionsServiceIngestion.slnx -c Release --no-restore
+      - run: dotnet test AgrosolutionsServiceIngestion.slnx -c Release --no-build --verbosity normal
+
+  deploy-to-eks:
+    name: Deploy to AWS EKS
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Deploy to EKS
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
+
+          sed -i "s|agrosolutions-ingestion-api:latest|$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|g" k8s/production/deployment.yaml
+
+          kubectl apply -f k8s/production/namespace.yaml
+          kubectl apply -f k8s/production/configmaps.yaml
+          kubectl apply -f k8s/production/services.yaml
+          kubectl apply -f k8s/production/deployment.yaml
+          kubectl apply -f k8s/production/hpa.yaml
+          kubectl apply -f k8s/production/resource-configs.yaml
+          kubectl apply -f k8s/production/observability.yaml || echo "⚠️ Observability ignorado: Prometheus Operator CRDs não encontrados"
+
+          kubectl rollout status deployment/ingestion-api -n agrosolutions-ingestion --timeout=300s
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          kubectl get pods -n agrosolutions-ingestion || true
 
 jobs:
   build-and-test:

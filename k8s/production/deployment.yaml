@@ -1,5 +1,4 @@
 ---
-# Ingestion API Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,13 +17,8 @@ spec:
     metadata:
       labels:
         app: ingestion-api
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8080"
-        prometheus.io/path: "/metrics"
     spec:
-      serviceAccountName: agrosolutions-ingestion-sa  # IRSA - IAM Role for Service Accounts
-      terminationGracePeriodSeconds: 30
+      serviceAccountName: agrosolutions-ingestion-sa
       containers:
       - name: ingestion-api
         image: 316295889438.dkr.ecr.sa-east-1.amazonaws.com/agrosolutions-ingestion-api:latest
@@ -35,31 +29,18 @@ spec:
         envFrom:
         - configMapRef:
             name: ingestion-api-config
-
         readinessProbe:
           httpGet:
             path: /health
             port: 8080
           initialDelaySeconds: 15
           periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-
         livenessProbe:
           httpGet:
             path: /health
             port: 8080
           initialDelaySeconds: 30
           periodSeconds: 20
-          timeoutSeconds: 5
-          failureThreshold: 3
-
-        lifecycle:
-          preStop:
-            exec:
-              command: ["/bin/sh", "-c", "sleep 10"]
-
-        # Resource Management
         resources:
           requests:
             memory: "64Mi"
@@ -67,12 +48,3 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "250m"
-
-        # Security Context
-        securityContext:
-          allowPrivilegeEscalation: false
-          runAsNonRoot: true
-          runAsUser: 1001
-          capabilities:
-            drop:
-            - ALL
