@@ -9,11 +9,38 @@ data:
   ASPNETCORE_ENVIRONMENT: "Production"
   ASPNETCORE_URLS: "http://*:8080"
   AllowedHosts: "*"
-  
+
+  # OpenTelemetry Configuration
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-service.agrosolutions-observability:4317"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+  OTEL_SERVICE_NAME: "agrosolutions-ingestion-api"
+  OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=production,service.version=1.0.0"
+  OTEL_TRACES_EXPORTER: "otlp"
+  OTEL_METRICS_EXPORTER: "otlp"
+  OTEL_LOGS_EXPORTER: "otlp"
+
   # AWS Configuration
   AWS__Region: "sa-east-1"
-  AWS__SnsTopicArn: "arn:aws:sns:sa-east-1:316295889438:agrosolutions-raw-data"
-  
+
+  # AWS SNS Topics (Ingestion Service publica dados brutos de sensores)
+  AWS__SNS__Topics__SensorRawTopic: "arn:aws:sns:sa-east-1:316295889438:agrosolutions-raw-data"
+
+  # AWS SQS Queues (filas downstream que recebem eventos via SNS fan-out)
+  AWS__SQS__Queues__StatusChangedQueue: "https://sqs.sa-east-1.amazonaws.com/316295889438/agrosolutions-status-changed-queue"
+  AWS__SQS__Queues__EmailQueue: "https://sqs.sa-east-1.amazonaws.com/316295889438/agrosolutions-email-queue"
+  AWS__SQS__Queues__PropertyEventsQueue: "https://sqs.sa-east-1.amazonaws.com/316295889438/agrosolutions-property-events-queue"
+  AWS__SQS__Queues__ProdutorSyncQueue: "https://sqs.sa-east-1.amazonaws.com/316295889438/agrosolutions-produtor-sync-queue"
+  AWS__SQS__Queues__IdentityEventsQueue: "https://sqs.sa-east-1.amazonaws.com/316295889438/agrosolutions-identity-events"
+
+  # Resilience (Polly Circuit Breaker)
+  Resilience__CircuitBreaker__FailureRatio: "0.5"
+  Resilience__CircuitBreaker__SamplingDuration: "30"
+  Resilience__CircuitBreaker__MinimumThroughput: "10"
+  Resilience__CircuitBreaker__BreakDuration: "30"
+
+  # Health Checks
+  HealthChecks__Timeout: "10"
+
   # Logging Configuration
   Logging__LogLevel__Default: "Information"
   Logging__LogLevel__Microsoft.AspNetCore: "Warning"

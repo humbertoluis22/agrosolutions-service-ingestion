@@ -26,6 +26,7 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
     spec:
+      serviceAccountName: agrosolutions-ingestion-sa  # IRSA - IAM Role for Service Accounts
       terminationGracePeriodSeconds: 30
       containers:
       - name: ingestion-api
@@ -37,37 +38,30 @@ spec:
         envFrom:
         - configMapRef:
             name: ingestion-api-config
-        env:
-        # AWS Credentials from Secret
-        - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: ingestion-aws-secrets
-              key: AWS_ACCESS_KEY_ID
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: ingestion-aws-secrets
-              key: AWS_SECRET_ACCESS_KEY
-        
-        # Health Checks
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 15
-          periodSeconds: 20
-          timeoutSeconds: 5
-          failureThreshold: 3
+
         readinessProbe:
           httpGet:
-            path: /health
+            path: /health/ready
             port: 8080
-          initialDelaySeconds: 10
+          initialDelaySeconds: 30
           periodSeconds: 10
-          timeoutSeconds: 3
+          timeoutSeconds: 5
           failureThreshold: 3
-        
+
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
+
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 10"]
+
         # Resource Management
         resources:
           requests:
@@ -76,7 +70,7 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "1000m"
-        
+
         # Security Context
         securityContext:
           allowPrivilegeEscalation: false

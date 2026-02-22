@@ -1,113 +1,232 @@
-name: Deploy to EKS
+name: AgroSolutions Ingestion - CI/CD Pipeline
 
 on:
   push:
     branches:
       - main
+      - develop
   pull_request:
     branches:
       - main
   workflow_dispatch:
 
 env:
-  AWS_REGION: sa-east-1
   ECR_REPOSITORY: agrosolutions-ingestion-api
   EKS_CLUSTER_NAME: agrosolutions-eks-cluster
+  AWS_REGION: sa-east-1
+  DOTNET_VERSION: "10.0.x"
 
 jobs:
   build-and-test:
     name: Build and Test
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '10.0.x'
-    
-    - name: Restore dependencies
-      run: dotnet restore AgrosolutionsServiceIngestion.slnx
-    
-    - name: Build
-      run: dotnet build AgrosolutionsServiceIngestion.slnx --configuration Release --no-restore
-    
-    - name: Test
-      run: |
-        if [ -d "tests" ]; then
-          dotnet test AgrosolutionsServiceIngestion.slnx --configuration Release --no-build --verbosity normal
-        else
-          echo "No test projects found, skipping tests"
-        fi
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  deploy:
-    name: Deploy to EKS
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore AgrosolutionsServiceIngestion.slnx
+
+      - name: Build solution
+        run: dotnet build AgrosolutionsServiceIngestion.slnx -c Release --no-restore
+
+      - name: Run tests
+        run: |
+          if [ -d "tests" ]; then
+            dotnet test AgrosolutionsServiceIngestion.slnx --configuration Release --no-build --verbosity normal
+          else
+            echo "No test projects found, skipping tests"
+          fi
+
+  deploy-to-eks:
+    name: Deploy to AWS EKS
     runs-on: ubuntu-latest
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
+    permissions:
+      id-token: write   # Required for OIDC
+      contents: read    # Required to checkout code
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-    
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
-    
-    - name: Build, tag, and push image to Amazon ECR
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        IMAGE_TAG: ${{ github.sha }}
-      run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-    
-    - name: Update kubeconfig
-      run: |
-        aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
-    
-    - name: Create namespace if not exists
-      run: |
-        kubectl create namespace agrosolutions-ingestion --dry-run=client -o yaml | kubectl apply -f -
-    
-    - name: Create AWS secrets
-      run: |
-        kubectl create secret generic ingestion-aws-secrets \
-          --from-literal=AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
-          --from-literal=AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-          --namespace agrosolutions-ingestion \
-          --dry-run=client -o yaml | kubectl apply -f -
-    
-    - name: Deploy to EKS
-      run: |
-        kubectl apply -f k8s/production/namespace.yaml
-        kubectl apply -f k8s/production/configmaps.yaml
-        kubectl apply -f k8s/production/deployment.yaml
-        kubectl apply -f k8s/production/services.yaml
-        kubectl apply -f k8s/production/hpa.yaml
-        kubectl apply -f k8s/production/resource-configs.yaml
-        
-        # Apply observability if Prometheus Operator is installed
-        kubectl apply -f k8s/production/observability.yaml --dry-run=client || true
-    
-    - name: Wait for rollout to complete
-      run: |
-        kubectl rollout status deployment/ingestion-api -n agrosolutions-ingestion --timeout=5m
-    
-    - name: Verify deployment
-      run: |
-        kubectl get deployments -n agrosolutions-ingestion
-        kubectl get pods -n agrosolutions-ingestion
-        kubectl get svc -n agrosolutions-ingestion
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: GitHubActions-IngestionDeploy-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS connection
+        run: |
+          echo "Verificando credenciais AWS..."
+          aws sts get-caller-identity
+          echo "Verificando cluster EKS..."
+          aws eks describe-cluster --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push Docker image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "Building Docker image..."
+          docker build \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            .
+
+          echo "Pushing to ECR..."
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "✅ Image pushed successfully: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+      - name: Configure Kubectl for EKS
+        run: |
+          aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+          kubectl version --client
+
+      - name: Verify EKS connection
+        run: |
+          echo "Verificando conectividade com EKS..."
+          kubectl cluster-info
+          kubectl get nodes
+          echo "Namespaces existentes:"
+          kubectl get namespaces
+
+      - name: Deploy to EKS
+        run: |
+          echo "Imagem a ser deployada: ${{ steps.build-image.outputs.image }}"
+
+          # Substituir placeholder da imagem no deployment
+          sed -i 's|316295889438.dkr.ecr.sa-east-1.amazonaws.com/agrosolutions-ingestion-api:latest|${{ steps.build-image.outputs.image }}|g' k8s/production/deployment.yaml
+
+          echo "Verificando substituição da imagem:"
+          grep "image:" k8s/production/deployment.yaml | head -5
+
+          echo "📦 Aplicando namespace e service account..."
+          kubectl apply -f k8s/production/namespace.yaml
+
+          echo "🔧 Aplicando ConfigMaps..."
+          kubectl apply -f k8s/production/configmaps.yaml
+
+          echo "📡 Aplicando Services..."
+          kubectl apply -f k8s/production/services.yaml
+
+          echo "🚀 Aplicando deployment da aplicação..."
+          kubectl apply -f k8s/production/deployment.yaml
+
+          echo "🔄 Aplicando HPA..."
+          kubectl apply -f k8s/production/hpa.yaml
+
+          echo "⚙️ Aplicando Resource Configs..."
+          kubectl apply -f k8s/production/resource-configs.yaml
+
+          echo "📊 Aplicando Observability..."
+          kubectl apply -f k8s/production/observability.yaml || echo "Observability manifests not found, skipping..."
+
+          echo "✅ Manifestos aplicados com sucesso!"
+
+      - name: Verify Deployment
+        run: |
+          echo "🔍 Verificando status do deploy..."
+
+          echo "Pods:"
+          kubectl get pods -n agrosolutions-ingestion
+
+          echo "Services:"
+          kubectl get svc -n agrosolutions-ingestion
+
+          echo "⏳ Aguardando rollout da Ingestion API..."
+          kubectl rollout status deployment/ingestion-api -n agrosolutions-ingestion --timeout=300s
+
+          echo "📊 Status final dos deployments:"
+          kubectl get deployments -n agrosolutions-ingestion
+          kubectl get pods -n agrosolutions-ingestion -o wide
+
+          echo "📈 Status do HPA:"
+          kubectl get hpa -n agrosolutions-ingestion
+
+          echo "🏥 Testando health endpoint internamente..."
+          POD_NAME=$(kubectl get pod -l app=ingestion-api -n agrosolutions-ingestion -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+          if [ -n "$POD_NAME" ]; then
+            for i in {1..3}; do
+              echo "Tentativa $i/3 - Health check via pod..."
+              HEALTH_RESULT=$(kubectl exec -n agrosolutions-ingestion "$POD_NAME" -- wget -qO- http://localhost:8080/health/ready 2>/dev/null || true)
+              if [ -n "$HEALTH_RESULT" ]; then
+                echo "✅ Health check passou: $HEALTH_RESULT"
+                break
+              else
+                echo "⚠️ Health check não respondeu, aguardando 10s..."
+                sleep 10
+              fi
+            done
+          else
+            echo "⚠️ Pod não encontrado para health check interno"
+          fi
+
+          echo "🚀 Deploy concluído com sucesso!"
+
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "📊 DEPLOYMENT SUMMARY"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Build: SUCCESS"
+          echo "✅ Docker Image: ${{ steps.build-image.outputs.image }}"
+          echo "✅ Deployment: SUCCESS"
+          echo "🌍 Environment: Production (AWS EKS)"
+          echo "📅 Deployed at: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          echo "🆔 Commit: ${{ github.sha }}"
+          echo "👤 Author: ${{ github.actor }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "❌ Deploy falhou. Executando rollback..."
+
+          if kubectl cluster-info &> /dev/null; then
+            echo "Conexão com Kubernetes OK, executando rollback..."
+
+            if kubectl get deployment ingestion-api -n agrosolutions-ingestion &> /dev/null; then
+              HISTORY=$(kubectl rollout history deployment/ingestion-api -n agrosolutions-ingestion 2>&1 || true)
+              if echo "$HISTORY" | grep -q "REVISION"; then
+                REVISION_COUNT=$(echo "$HISTORY" | grep -c "^[0-9]" || true)
+                if [ "$REVISION_COUNT" -gt "1" ]; then
+                  echo "⏪ Fazendo rollback da Ingestion API..."
+                  kubectl rollout undo deployment/ingestion-api -n agrosolutions-ingestion || true
+                else
+                  echo "⚠️ Apenas uma revisão encontrada, rollback não é possível (primeiro deploy)"
+                fi
+              else
+                echo "⚠️ Sem histórico de rollout disponível"
+              fi
+            fi
+
+            echo "📋 Logs do pod com falha:"
+            kubectl logs -n agrosolutions-ingestion -l app=ingestion-api --tail=50 || true
+
+            echo "📋 Describe do deployment:"
+            kubectl describe deployment ingestion-api -n agrosolutions-ingestion || true
+
+            echo "📋 Events do namespace:"
+            kubectl get events -n agrosolutions-ingestion --sort-by='.lastTimestamp' | tail -20 || true
+
+            echo "✅ Diagnóstico concluído. Verifique os logs para detalhes do erro."
+          else
+            echo "❌ Não foi possível conectar ao Kubernetes. Rollback manual necessário."
+            exit 1
+          fi
+

@@ -17,7 +17,7 @@ services:
       - AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
       # --- Configurações AWS (Mapeamento do appsettings "AWS") ---
       - AWS__Region=sa-east-1
-      - AWS__SnsTopicArn=arn:aws:sns:sa-east-1:316295889438:agrosolutions-raw-data
+      - AWS__SNS__Topics__SensorRawTopic=arn:aws:sns:sa-east-1:316295889438:agrosolutions-raw-data
       
     networks:
       - agrosolutions-network

@@ -5,3 +5,13 @@ metadata:
   labels:
     app: agrosolutions-ingestion
     environment: production
+
+---
+# ServiceAccount com anotação IRSA para acesso ao SNS via IAM Role
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agrosolutions-ingestion-sa
+  namespace: agrosolutions-ingestion
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::316295889438:role/agrosolutions-ingestion-role"
