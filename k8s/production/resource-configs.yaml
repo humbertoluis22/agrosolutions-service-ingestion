@@ -1,0 +1,99 @@
+---
+# NetworkPolicy: Permite tráfego apenas de sources específicos
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ingestion-api-network-policy
+  namespace: agrosolutions-ingestion
+spec:
+  podSelector:
+    matchLabels:
+      app: ingestion-api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Permite tráfego do API Gateway
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: agrosolutions-gateway
+    ports:
+    - protocol: TCP
+      port: 8080
+  # Permite health checks do load balancer
+  - from:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 8080
+  # Permite Prometheus scraping
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: agrosolutions-observability
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  # Permite acesso externo (AWS SNS/SQS, DNS, etc)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+
+---
+# PodDisruptionBudget: Garante disponibilidade durante updates
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ingestion-api-pdb
+  namespace: agrosolutions-ingestion
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: ingestion-api
+
+---
+# ResourceQuota: Limita recursos do namespace
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ingestion-quota
+  namespace: agrosolutions-ingestion
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: "8Gi"
+    limits.cpu: "10"
+    limits.memory: "16Gi"
+    pods: "20"
+
+---
+# LimitRange: Define limites padrão para pods sem resource requests/limits
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: ingestion-limit-range
+  namespace: agrosolutions-ingestion
+spec:
+  limits:
+  - max:
+      cpu: "2"
+      memory: "2Gi"
+    min:
+      cpu: "100m"
+      memory: "128Mi"
+    default:
+      cpu: "500m"
+      memory: "512Mi"
+    defaultRequest:
+      cpu: "200m"
+      memory: "256Mi"
+    type: Container

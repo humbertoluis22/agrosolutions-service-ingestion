@@ -52,3 +52,7 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+# Ignorar pastas de build e do Visual Studio
+.vs/
+bin/
+obj/

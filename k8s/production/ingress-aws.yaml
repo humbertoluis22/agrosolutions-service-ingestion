@@ -1,0 +1,9 @@
+# ⚠️ IMPORTANTE: Acesso Principal via Ocelot API Gateway
+# Este serviço NÃO possui Ingress próprio.
+# O acesso PÚBLICO à API deve ser feito via Ocelot Gateway em:
+# - api.agrosolutions.site/ingestion/* → roteado para ingestion-api-service.agrosolutions-ingestion:80
+#
+# Configuração do Ocelot Gateway está em: agrosolutions-api-gateway/src/AgroSolutions.ApiGateway/ocelot.json
+#
+# Para acesso direto (debug), use kubectl port-forward:
+#   kubectl port-forward -n agrosolutions-ingestion svc/ingestion-api-service 8080:80

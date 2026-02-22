@@ -1,0 +1,27 @@
+services:
+  ingestion-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ingestion-api
+    ports:
+      - "5198:8080"  # Host:Container - Mapeia porta local 5198 para container 8080
+    environment:
+      # Força o Kestrel a rodar na porta 8080 dentro do container
+      - ASPNETCORE_URLS=http://+:8080 
+      - ASPNETCORE_ENVIRONMENT=Development
+      
+      # --- Credenciais AWS (Injetadas do ambiente host) ---
+
+      - AWS_ACCESS_KEY_ID= "${AWS_ACCESS_KEY_ID}" 
+      - AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
+      # --- Configurações AWS (Mapeamento do appsettings "AWS") ---
+      - AWS__Region=sa-east-1
+      - AWS__SNS__Topics__SensorRawTopic=arn:aws:sns:sa-east-1:316295889438:agrosolutions-raw-data
+      
+    networks:
+      - agrosolutions-network
+
+networks:
+  agrosolutions-network:
+    external: true
